@@ -180,27 +180,28 @@ class AbsArchiveWrite(ArchiveWrite):
         if block_size <= 0:
             block_size = 10240  # pragma: no cover
 
-        with new_archive_entry() as entry_p:
-            entry = ArchiveEntry(None, entry_p)
-            with new_archive_read_disk(path) as read_p:
-                while True:
-                    r = read_next_header2(read_p, entry_p)
-                    if r == ARCHIVE_EOF:
-                        break
-                    entry.pathname = store_path
-                    read_disk_descend(read_p)
-                    write_header(write_p, entry_p)
-                    try:
-                        with open(entry_sourcepath(entry_p), "rb") as f:
-                            while True:
-                                data = f.read(block_size)
-                                if not data:
-                                    break
-                                write_data(write_p, data, len(data))
-                    except IOError as e:
-                        if e.errno != 21:
-                            raise  # pragma: no cover
-                    write_finish_entry(write_p)
-                    entry_clear(entry_p)
-                    if os.path.isdir(path):
-                        break
+        entry = ArchiveEntry(None)
+        entry_p = entry._entry_p
+
+        with new_archive_read_disk(path) as read_p:
+            while True:
+                r = read_next_header2(read_p, entry_p)
+                if r == ARCHIVE_EOF:
+                    break
+                entry.pathname = store_path
+                read_disk_descend(read_p)
+                write_header(write_p, entry_p)
+                try:
+                    with open(entry_sourcepath(entry_p), "rb") as f:
+                        while True:
+                            data = f.read(block_size)
+                            if not data:
+                                break
+                            write_data(write_p, data, len(data))
+                except IOError as e:
+                    if e.errno != 21:
+                        raise  # pragma: no cover
+                write_finish_entry(write_p)
+                entry_clear(entry_p)
+                if os.path.isdir(path):
+                    break
